@@ -39,22 +39,32 @@ std::vector<int> GraphSolver::kernighan_lin() {
     std::vector<char> edge_labels(this->graph.numberOfEdges());
     andres::graph::multicut::kernighanLin(this->graph, this->weights, edge_labels, edge_labels);
 
-    return std::vector<int>(edge_labels.begin(), edge_labels.end());;
+    return std::vector<int>(edge_labels.begin(), edge_labels.end());
 }
 
 std::vector<int> GraphSolver::KLj(int distance_lower_bound, int distance_higher_bound) {
     if (distance_lower_bound < 0)
         distance_lower_bound = 0;
     if (distance_higher_bound < 0)
-        distance_higher_bound = this->graph.numberOfVertices();
+        distance_higher_bound = this->graph.numberOfVertices()-1;
 
+    HERE;
     // lift graph
     Graph<> lifted_graph;
-    lift(graph, lifted_graph, distance_lower_bound, distance_higher_bound);
+    PRINT(distance_lower_bound)
+    PRINT(distance_higher_bound)
+    lift(graph, lifted_graph, distance_higher_bound, distance_lower_bound);
 
+    HERE;
     vector<double> edge_cut_probabilities = this->weights;
     vector<double> edge_split_probabilities_lifted(lifted_graph.numberOfEdges());
+    PRINT(graph.numberOfVertices())
+    PRINT(graph.numberOfEdges())
+    PRINT(lifted_graph.numberOfVertices())
+    PRINT(lifted_graph.numberOfEdges())
+    HERE;
     if (weights_probabilities)
+        HERE;
         transform(
             edge_cut_probabilities.begin(),
             edge_cut_probabilities.end(),
@@ -62,14 +72,17 @@ std::vector<int> GraphSolver::KLj(int distance_lower_bound, int distance_higher_
             ProbabilityToNegativeLogInverseProbability<double,double>()
         );
     
+    HERE;
     liftEdgeValues(
         graph,
         lifted_graph,
         edge_cut_probabilities.begin(),
         edge_split_probabilities_lifted.begin()
     );
+    HERE;
     
     if (weights_probabilities)
+        HERE;
         transform(
             edge_split_probabilities_lifted.begin(),
             edge_split_probabilities_lifted.end(),
@@ -77,19 +90,37 @@ std::vector<int> GraphSolver::KLj(int distance_lower_bound, int distance_higher_
             NegativeLogProbabilityToInverseProbability<double,double>()
         );
 
+    HERE;
     // Solve Lifted Multicut problem
     std::vector<char> edge_labels(lifted_graph.numberOfEdges());
-    auto& edge_values = edge_split_probabilities_lifted;
-    auto& original_graph = graph;
+    auto edge_values = edge_split_probabilities_lifted;
+    auto original_graph = graph;
 
+    PRINT_STD_VEC(edge_values);
+    if (weights_probabilities)
+        std::transform(
+            edge_values.begin(),
+            edge_values.end(),
+            edge_values.begin(),
+            andres::NegativeLogProbabilityRatio<double,double>()
+            );
+
+
+    HERE;
     // GAEC initialization
     andres::graph::multicut_lifted::greedyAdditiveEdgeContraction(original_graph, lifted_graph, edge_values, edge_labels);
+    PRINT_STD_VEC(edge_values);
+    PRINT_STD_VEC(std::vector<int>(edge_labels.begin(), edge_labels.end()));
+    HERE;
     // kernighan-Lin optimization
     andres::graph::multicut_lifted::kernighanLin(original_graph, lifted_graph, edge_values, edge_labels, edge_labels);
+    HERE;
 
     // read solution
     std::vector<int> vertex_labels(lifted_graph.numberOfVertices());
+    HERE;
     edgeToVertexLabels(lifted_graph, edge_labels, vertex_labels);
+    HERE;
 
     // TODO: use for initialization
     // Solution greedyAdditiveEdgeContraction(Problem<GRAPH> const& problem, Solution const& input_labeling)
