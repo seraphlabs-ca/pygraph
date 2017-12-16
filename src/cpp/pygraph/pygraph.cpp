@@ -63,7 +63,7 @@ std::vector<int> GraphSolver::KLj(int distance_lower_bound, int distance_higher_
     PRINT(lifted_graph.numberOfVertices())
     PRINT(lifted_graph.numberOfEdges())
     HERE;
-    if (weights_probabilities)
+    if (weights_probabilities) {
         HERE;
         transform(
             edge_cut_probabilities.begin(),
@@ -71,6 +71,7 @@ std::vector<int> GraphSolver::KLj(int distance_lower_bound, int distance_higher_
             edge_cut_probabilities.begin(),
             ProbabilityToNegativeLogInverseProbability<double,double>()
         );
+    }
     
     HERE;
     liftEdgeValues(
@@ -81,7 +82,7 @@ std::vector<int> GraphSolver::KLj(int distance_lower_bound, int distance_higher_
     );
     HERE;
     
-    if (weights_probabilities)
+    if (weights_probabilities) {
         HERE;
         transform(
             edge_split_probabilities_lifted.begin(),
@@ -89,6 +90,7 @@ std::vector<int> GraphSolver::KLj(int distance_lower_bound, int distance_higher_
             edge_split_probabilities_lifted.begin(),
             NegativeLogProbabilityToInverseProbability<double,double>()
         );
+    }
 
     HERE;
     // Solve Lifted Multicut problem
@@ -97,13 +99,17 @@ std::vector<int> GraphSolver::KLj(int distance_lower_bound, int distance_higher_
     auto original_graph = graph;
 
     PRINT_STD_VEC(edge_values);
-    if (weights_probabilities)
+    if (weights_probabilities) {
+        HERE;
+        PRINT_STD_VEC(edge_values);
         std::transform(
             edge_values.begin(),
             edge_values.end(),
             edge_values.begin(),
             andres::NegativeLogProbabilityRatio<double,double>()
             );
+        PRINT_STD_VEC(edge_values);
+    }
 
 
     HERE;
