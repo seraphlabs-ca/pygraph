@@ -9,9 +9,11 @@
 #include <andres/graph/multicut/kernighan-lin.hxx>
 #include <andres/graph/multicut-lifted/greedy-additive.hxx>
 #include <andres/graph/multicut-lifted/kernighan-lin.hxx>
+#include <nl-lmp/solve-joint.hxx>
 
 #include <utils.hxx>
 #include <probabilistic-lifting.hxx>
+
 
 using namespace std;
 using namespace andres;
@@ -21,112 +23,133 @@ using namespace andres::graph;
 // Class GraphSolver
 ///////////////////////////////////////////////////////////////////////////////
 
-GraphSolver::GraphSolver(int vert_num, bool weights_probabilities): 
-    vert_num(vert_num), weights_probabilities(weights_probabilities) {
-    this->graph.insertVertices(vert_num);
+GraphSolver::GraphSolver(bool weights_probabilities): 
+    vert_num(0), weights_probabilities(weights_probabilities) {
 }
 
 void GraphSolver::add_edge(int i, int j, double w) {
-    if ((i >= this->vert_num) || (j >= this->vert_num)) {
-        throw DEBUG_FORMAT_STR("Edges must be 0 <= i,j <= %i", this->vert_num);
+    if ((i < 0) || (j < 0)) {
+        throw DEBUG_STR("Edges must be 0 <= i,j");
     }
 
-    this->graph.insertEdge(i, j); 
-    this->weights.push_back(w);
+    edges.push_back(std::tuple<int, int>(i, j));
+    weights.push_back(w);
+    // store number of vertices
+    vert_num = std::max(vert_num, std::max(i, j));
 }
 
+
+// Returns a Graph with all edges
+std::shared_ptr< andres::graph::Graph<> > GraphSolver::get_graph() {
+    std::shared_ptr< andres::graph::Graph<> > graph = std::make_shared< andres::graph::Graph<> >();
+    graph->insertVertices(vert_num);
+    for (auto& it : this->edges) {
+        int i, j;
+        std::tie(i, j) = it;
+        graph->insertEdge(i, j); 
+    }
+
+    return graph;
+}
+    
+
+
 std::vector<int> GraphSolver::kernighan_lin() {
-    std::vector<char> edge_labels(this->graph.numberOfEdges());
-    andres::graph::multicut::kernighanLin(this->graph, this->weights, edge_labels, edge_labels);
+    std::shared_ptr < andres::graph::Graph<> > graph = this->get_graph();
+
+    std::vector<char> edge_labels(graph->numberOfEdges());
+    andres::graph::multicut::kernighanLin(*graph, this->weights, edge_labels, edge_labels);
 
     return std::vector<int>(edge_labels.begin(), edge_labels.end());
 }
 
 std::vector<int> GraphSolver::KLj(int distance_lower_bound, int distance_higher_bound) {
-    if (distance_lower_bound < 0)
-        distance_lower_bound = 0;
-    if (distance_higher_bound < 0)
-        distance_higher_bound = this->graph.numberOfVertices()-1;
+    std::shared_ptr < andres::graph::Graph<> > graph = this->get_graph();
 
-    HERE;
+    if (distance_lower_bound < 0) {
+        distance_lower_bound = 0;
+    }
+    if (distance_higher_bound < 0) {
+        distance_higher_bound = graph->numberOfVertices()-1;
+    }
+
     // lift graph
     Graph<> lifted_graph;
-    PRINT(distance_lower_bound)
-    PRINT(distance_higher_bound)
-    lift(graph, lifted_graph, distance_higher_bound, distance_lower_bound);
+    lift(*graph, lifted_graph, distance_higher_bound, distance_lower_bound);
 
-    HERE;
     vector<double> edge_cut_probabilities = this->weights;
     vector<double> edge_split_probabilities_lifted(lifted_graph.numberOfEdges());
-    PRINT(graph.numberOfVertices())
-    PRINT(graph.numberOfEdges())
-    PRINT(lifted_graph.numberOfVertices())
-    PRINT(lifted_graph.numberOfEdges())
-    HERE;
+    PFORMAT_STR("graph.numberOfVertices() = %d", graph->numberOfVertices())
+    PFORMAT_STR("graph.numberOfEdges() = %d", graph->numberOfEdges())
+    PFORMAT_STR("lifted_graph.numberOfVertices() = %d", lifted_graph.numberOfVertices())
+    PFORMAT_STR("lifted_graph.numberOfEdges() = %d", lifted_graph.numberOfEdges())
+    PRINT("edge_cut_probabilities =")
+    PRINT_STD_VEC(edge_cut_probabilities)
     if (weights_probabilities) {
-        HERE;
         transform(
             edge_cut_probabilities.begin(),
             edge_cut_probabilities.end(),
             edge_cut_probabilities.begin(),
             ProbabilityToNegativeLogInverseProbability<double,double>()
         );
-    }
-    
+        PRINT("edge_cut_probabilities =")
+        PRINT_STD_VEC(edge_cut_probabilities)
+    }    
+
     HERE;
     liftEdgeValues(
-        graph,
+        *graph,
         lifted_graph,
         edge_cut_probabilities.begin(),
         edge_split_probabilities_lifted.begin()
     );
-    HERE;
     
+    PRINT("edge_split_probabilities_lifted =")
+    PRINT_STD_VEC(edge_split_probabilities_lifted)
     if (weights_probabilities) {
-        HERE;
         transform(
             edge_split_probabilities_lifted.begin(),
             edge_split_probabilities_lifted.end(),
             edge_split_probabilities_lifted.begin(),
             NegativeLogProbabilityToInverseProbability<double,double>()
         );
+        PRINT("edge_split_probabilities_lifted =")
+        PRINT_STD_VEC(edge_split_probabilities_lifted)
     }
 
-    HERE;
     // Solve Lifted Multicut problem
     std::vector<char> edge_labels(lifted_graph.numberOfEdges());
-    auto edge_values = edge_split_probabilities_lifted;
-    auto original_graph = graph;
+    auto& edge_values = edge_split_probabilities_lifted;
+    auto& original_graph = *graph;
 
+    PRINT("egde_values =")
     PRINT_STD_VEC(edge_values);
     if (weights_probabilities) {
-        HERE;
-        PRINT_STD_VEC(edge_values);
         std::transform(
             edge_values.begin(),
             edge_values.end(),
             edge_values.begin(),
             andres::NegativeLogProbabilityRatio<double,double>()
             );
+        PRINT("egde_values =")
         PRINT_STD_VEC(edge_values);
     }
 
 
-    HERE;
     // GAEC initialization
     andres::graph::multicut_lifted::greedyAdditiveEdgeContraction(original_graph, lifted_graph, edge_values, edge_labels);
+    PRINT("egde_values =")
     PRINT_STD_VEC(edge_values);
+    PRINT("egde_labels =")
     PRINT_STD_VEC(std::vector<int>(edge_labels.begin(), edge_labels.end()));
-    HERE;
     // kernighan-Lin optimization
     andres::graph::multicut_lifted::kernighanLin(original_graph, lifted_graph, edge_values, edge_labels, edge_labels);
-    HERE;
 
     // read solution
     std::vector<int> vertex_labels(lifted_graph.numberOfVertices());
-    HERE;
     edgeToVertexLabels(lifted_graph, edge_labels, vertex_labels);
-    HERE;
+    PRINT("vertex_labels =")
+    PRINT_STD_VEC(vertex_labels);
 
     // TODO: use for initialization
     // Solution greedyAdditiveEdgeContraction(Problem<GRAPH> const& problem, Solution const& input_labeling)

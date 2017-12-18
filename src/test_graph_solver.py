@@ -21,7 +21,7 @@ if edge_label != (0, 1, 0, 1, 1, 0, 0):
 else:
     print "TEST PASSED"
 
-is_prob = True
+is_prob = False
 
 if is_prob:
     def f(x):
@@ -31,7 +31,7 @@ else:
     def f(x):
         x = max(x, 1.0 / 255)
         x = min(x, 1.0 - 1.0 / 255)
-        return np.log(x / (1.0 - x))
+        return -np.log(x / (1.0 - x))
 
 gs2 = pygraphSWIG.GraphSolver(6, is_prob)
 # Need to use 1-prob to cut on low probability
