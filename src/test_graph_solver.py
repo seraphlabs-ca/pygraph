@@ -42,6 +42,8 @@ gs2.add_edge(1, 4, f(0.3))
 gs2.add_edge(2, 5, f(0.1))
 gs2.add_edge(3, 4, f(0.0))
 gs2.add_edge(4, 5, f(0.8))
+gs2.add_edge(4, 6, f(0.8))
+gs2.add_edge(5, 6, f(0.8))
 
 vertex_class_cluster = gs2.lmp_KLj()
 print "vertex_class_cluster = %s" % str(vertex_class_cluster)

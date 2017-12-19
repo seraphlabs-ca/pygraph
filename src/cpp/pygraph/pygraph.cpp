@@ -50,6 +50,10 @@ std::shared_ptr< andres::graph::Graph<> > GraphSolver::get_graph() {
         graph->insertEdge(i, j); 
     }
 
+    // check that we did not entered an edge twice
+    if (graph->numberOfEdges() != this->weights.size()) {
+        throw DEBUG_STR("An edge appeared more than once!");
+    }
     return graph;
 }
     
@@ -134,6 +138,10 @@ std::vector<int> GraphSolver::lmp_KL(int distance_lower_bound, int distance_high
 
 std::vector< std::pair< int, int >  > GraphSolver::lmp_KLj(int distance_lower_bound, int distance_higher_bound) {
     std::shared_ptr < andres::graph::Graph<> > graph = this->get_graph();
+    HERE;
+    PRINT(weights.size());
+    PRINT(graph->numberOfVertices())
+    PRINT(graph->numberOfEdges())
 
     if (distance_lower_bound < 0) {
         distance_lower_bound = 0;
@@ -233,7 +241,6 @@ std::vector< std::pair< int, int >  > GraphSolver::lmp_KLj(int distance_lower_bo
     for (int i = 0; i < edge_cut_probabilities.size(); i++) {
         int v0 = original_graph.vertexOfEdge(i, 0); 
         int v1 = original_graph.vertexOfEdge(i, 1); 
-
         int c0 = vertex_labels[v0]; 
         int c1 = vertex_labels[v1]; 
 
