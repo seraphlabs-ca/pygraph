@@ -12,6 +12,7 @@
 #include <nl-lmp/problem.hxx>
 
 #include <memory>
+#include <utility>
 
 ///////////////////////////////////////////////////////////////////////////////
 // Classes
@@ -24,7 +25,7 @@ public:
     std::shared_ptr< andres::graph::Graph<> > get_graph();    
     std::vector<int> kernighan_lin();
     std::vector<int> lmp_KL(int distance_lower_bound=0, int distance_higher_bound=-1);
-    std::vector<int> lmp_KLj(int distance_lower_bound=0, int distance_higher_bound=-1);
+    std::vector< std::pair< int, int >  > lmp_KLj(int distance_lower_bound=0, int distance_higher_bound=-1);
 
 protected:
     int vert_num;

@@ -43,12 +43,5 @@ gs2.add_edge(2, 5, f(0.1))
 gs2.add_edge(3, 4, f(0.0))
 gs2.add_edge(4, 5, f(0.8))
 
-vertex_labels = gs2.lmp_KLj()
-vertext_clusters = {}
-for v, c in enumerate(vertex_labels):
-    l = vertext_clusters.get(c, [])
-    l.append(v)
-    vertext_clusters[c] = l
-
-print "vertex_labels = %s" % str(vertex_labels)
-print "vertext_clusters = %s" % str(vertext_clusters)
+vertex_class_cluster = gs2.lmp_KLj()
+print "vertex_class_cluster = %s" % str(vertex_class_cluster)

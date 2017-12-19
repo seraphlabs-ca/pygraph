@@ -132,7 +132,7 @@ std::vector<int> GraphSolver::lmp_KL(int distance_lower_bound, int distance_high
 }
 
 
-std::vector<int> GraphSolver::lmp_KLj(int distance_lower_bound, int distance_higher_bound) {
+std::vector< std::pair< int, int >  > GraphSolver::lmp_KLj(int distance_lower_bound, int distance_higher_bound) {
     std::shared_ptr < andres::graph::Graph<> > graph = this->get_graph();
 
     if (distance_lower_bound < 0) {
@@ -148,12 +148,12 @@ std::vector<int> GraphSolver::lmp_KLj(int distance_lower_bound, int distance_hig
 
     vector<double> edge_cut_probabilities = this->weights;
     vector<double> edge_split_probabilities_lifted(lifted_graph.numberOfEdges());
-    PFORMAT_STR("graph.numberOfVertices() = %d", graph->numberOfVertices())
-    PFORMAT_STR("graph.numberOfEdges() = %d", graph->numberOfEdges())
-    PFORMAT_STR("lifted_graph.numberOfVertices() = %d", lifted_graph.numberOfVertices())
-    PFORMAT_STR("lifted_graph.numberOfEdges() = %d", lifted_graph.numberOfEdges())
-    PRINT("edge_cut_probabilities =")
-    PRINT_STD_VEC(edge_cut_probabilities)
+    // PFORMAT_STR("graph.numberOfVertices() = %d", graph->numberOfVertices())
+    // PFORMAT_STR("graph.numberOfEdges() = %d", graph->numberOfEdges())
+    // PFORMAT_STR("lifted_graph.numberOfVertices() = %d", lifted_graph.numberOfVertices())
+    // PFORMAT_STR("lifted_graph.numberOfEdges() = %d", lifted_graph.numberOfEdges())
+    // PRINT("edge_cut_probabilities =")
+    // PRINT_STD_VEC(edge_cut_probabilities)
     if (weights_probabilities) {
         transform(
             edge_cut_probabilities.begin(),
@@ -161,11 +161,11 @@ std::vector<int> GraphSolver::lmp_KLj(int distance_lower_bound, int distance_hig
             edge_cut_probabilities.begin(),
             ProbabilityToNegativeLogInverseProbability<double,double>()
         );
-        PRINT("edge_cut_probabilities =")
-        PRINT_STD_VEC(edge_cut_probabilities)
+        // PRINT("edge_cut_probabilities =")
+        // PRINT_STD_VEC(edge_cut_probabilities)
     }    
 
-    HERE;
+    // HERE;
     liftEdgeValues(
         *graph,
         lifted_graph,
@@ -173,8 +173,8 @@ std::vector<int> GraphSolver::lmp_KLj(int distance_lower_bound, int distance_hig
         edge_split_probabilities_lifted.begin()
     );
     
-    PRINT("edge_split_probabilities_lifted =")
-    PRINT_STD_VEC(edge_split_probabilities_lifted)
+    // PRINT("edge_split_probabilities_lifted =")
+    // PRINT_STD_VEC(edge_split_probabilities_lifted)
     if (weights_probabilities) {
         transform(
             edge_split_probabilities_lifted.begin(),
@@ -182,8 +182,8 @@ std::vector<int> GraphSolver::lmp_KLj(int distance_lower_bound, int distance_hig
             edge_split_probabilities_lifted.begin(),
             NegativeLogProbabilityToInverseProbability<double,double>()
         );
-        PRINT("edge_split_probabilities_lifted =")
-        PRINT_STD_VEC(edge_split_probabilities_lifted)
+        // PRINT("edge_split_probabilities_lifted =")
+        // PRINT_STD_VEC(edge_split_probabilities_lifted)
     }
 
     // Solve Lifted Multicut problem
@@ -191,8 +191,8 @@ std::vector<int> GraphSolver::lmp_KLj(int distance_lower_bound, int distance_hig
     auto& edge_values = edge_split_probabilities_lifted;
     auto& original_graph = *graph;
 
-    PRINT("egde_values =")
-    PRINT_STD_VEC(edge_values);
+    // PRINT("egde_values =")
+    // PRINT_STD_VEC(edge_values);
     // convert probabilities to weights
     if (weights_probabilities) {
         std::transform(
@@ -201,34 +201,30 @@ std::vector<int> GraphSolver::lmp_KLj(int distance_lower_bound, int distance_hig
             edge_values.begin(),
             andres::NegativeLogProbabilityRatio<double,double>()
             );
-        PRINT("egde_values =")
-        PRINT_STD_VEC(edge_values);
+        // PRINT("egde_values =")
+        // PRINT_STD_VEC(edge_values);
     }
 
 
     // GAEC initialization
     andres::graph::multicut_lifted::greedyAdditiveEdgeContraction(original_graph, lifted_graph, edge_values, edge_labels);
-    PRINT("egde_values =")
-    PRINT_STD_VEC(edge_values);
-    PRINT("egde_labels =")
-    PRINT_STD_VEC(std::vector<int>(edge_labels.begin(), edge_labels.end()));
-    // kernighan-Lin optimization
-    andres::graph::multicut_lifted::kernighanLin(original_graph, lifted_graph, edge_values, edge_labels, edge_labels);
-    PRINT("egde_labels =")
-    PRINT_STD_VEC(std::vector<int>(edge_labels.begin(), edge_labels.end()));
+    // PRINT("egde_values =")
+    // PRINT_STD_VEC(edge_values);
+    // PRINT("egde_labels =")
+    // PRINT_STD_VEC(std::vector<int>(edge_labels.begin(), edge_labels.end()));
 
     // build classes per vertex
     std::vector<int> vertex_labels(lifted_graph.numberOfVertices());
     edgeToVertexLabels(lifted_graph, edge_labels, vertex_labels);
-    PRINT("vertex_labels =")
-    PRINT_STD_VEC(vertex_labels);
+    // PRINT("vertex_labels =")
+    // PRINT_STD_VEC(vertex_labels);
 
     // get number of classes
     int num_classes = -1;
     for (auto& it : vertex_labels) {
-        num_classes = std::max(num_classes, it);
+        num_classes = std::max(num_classes, it+1);
     }
-    PFORMAT_STR("num_classes = %d", num_classes)
+    // PFORMAT_STR("num_classes = %d", num_classes)
 
     nl_lmp::Problem< andres::graph::Graph<> > problem(vert_num, num_classes);
     nl_lmp::Solution input_labeling(vert_num);
@@ -267,10 +263,16 @@ std::vector<int> GraphSolver::lmp_KLj(int distance_lower_bound, int distance_hig
     // Run KLj algorithm
     nl_lmp::Solution output_solution = nl_lmp::update_labels_and_multicut(problem, input_solution);
 
-    for (auto& it : output_solution) {
-        PFORMAT_STR("classIndex = %d clusterIndex = %d", it.classIndex % it.clusterIndex);
+    // store vertices class and clusters
+    std::vector< std::pair< int, int >  > vertex_class_luster(vert_num);
+    for (int i = 0; i < vert_num; i++) {
+        vertex_class_luster[i].first = output_solution[i].classIndex;
+        vertex_class_luster[i].second = output_solution[i].clusterIndex;
+        // PFORMAT_STR("classIndex = %d clusterIndex = %d", output_solution[i].classIndex % output_solution[i].clusterIndex);
     }
 
-    return vertex_labels;
+
+
+    return vertex_class_luster;
 }
 
