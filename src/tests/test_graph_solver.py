@@ -1,6 +1,8 @@
 import pygraph
 import numpy as np
+import time
 
+# test KL
 gs1 = pygraph.GraphSolver()
 gs1.add_edge(0, 1, 5.0)
 gs1.add_edge(0, 3, -20.0)
@@ -31,6 +33,7 @@ else:
         x = min(x, 1.0 - 1.0 / 255)
         return -np.log(x / (1.0 - x))
 
+# Test lifting multicut problem + KLj
 gs2 = pygraph.GraphSolver()
 # Need to use 1-prob to cut on low probability
 gs2.add_edge(0, 1, f(1.0))
@@ -48,15 +51,27 @@ print "vertex_class_cluster = %s" % str(vertex_class_cluster)
 
 
 # test speed
-gs3 = pygraph.GraphSolver()
 
 # 10 frames
 N = 10
 # 5 subjects
 S = 5
-for i in range(N):
-    for s in range(S):
-        # connect to all future frames and all subjects
-        for j in range(i + 1, N):
-            for t in range(S):
-                gs3.add_edge(i * N + s, j * N + t, np.random.rand())
+# R repeats
+R = 10
+
+t0 = time.time()
+
+for r in range(R):
+    gs3 = pygraph.GraphSolver()
+    for i in range(N):
+        for s in range(S):
+            # connect to all future frames and all subjects
+            for j in range(i + 1, N):
+                for t in range(S):
+                    gs3.add_edge(i * N + s, j * N + t, np.random.rand())
+    gs3.lmp_KLj()
+
+t1 = time.time()
+
+dt = (t1 - t0) / R
+print "lmp_KLj %.2e [sec] = %.2e [fps]" % (dt, 1.0 / dt)
