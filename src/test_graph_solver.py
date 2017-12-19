@@ -47,3 +47,18 @@ gs2.add_edge(5, 6, f(0.8))
 
 vertex_class_cluster = gs2.lmp_KLj()
 print "vertex_class_cluster = %s" % str(vertex_class_cluster)
+
+
+# test speed
+gs3 = pygraphSWIG.GraphSolver()
+
+# 10 frames
+N = 10
+# 5 subjects
+S = 5
+for i in range(N):
+    for s in range(S):
+        # connect to all future frames and all subjects
+        for j in range(i + 1, N):
+            for t in range(S):
+                gs3.add_edge(i * N + s, j * N + t, np.random.rand())

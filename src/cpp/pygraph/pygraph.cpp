@@ -138,10 +138,6 @@ std::vector<int> GraphSolver::lmp_KL(int distance_lower_bound, int distance_high
 
 std::vector< std::pair< int, int >  > GraphSolver::lmp_KLj(int distance_lower_bound, int distance_higher_bound) {
     std::shared_ptr < andres::graph::Graph<> > graph = this->get_graph();
-    HERE;
-    PRINT(weights.size());
-    PRINT(graph->numberOfVertices())
-    PRINT(graph->numberOfEdges())
 
     if (distance_lower_bound < 0) {
         distance_lower_bound = 0;
@@ -271,15 +267,15 @@ std::vector< std::pair< int, int >  > GraphSolver::lmp_KLj(int distance_lower_bo
     nl_lmp::Solution output_solution = nl_lmp::update_labels_and_multicut(problem, input_solution);
 
     // store vertices class and clusters
-    std::vector< std::pair< int, int >  > vertex_class_luster(vert_num);
+    std::vector< std::pair< int, int >  > vertex_class_cluster(vert_num);
     for (int i = 0; i < vert_num; i++) {
-        vertex_class_luster[i].first = output_solution[i].classIndex;
-        vertex_class_luster[i].second = output_solution[i].clusterIndex;
+        vertex_class_cluster[i].first = output_solution[i].classIndex;
+        vertex_class_cluster[i].second = output_solution[i].clusterIndex;
         // PFORMAT_STR("classIndex = %d clusterIndex = %d", output_solution[i].classIndex % output_solution[i].clusterIndex);
     }
 
 
 
-    return vertex_class_luster;
+    return vertex_class_cluster;
 }
 
