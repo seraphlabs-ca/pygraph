@@ -9,6 +9,7 @@
 #include <andres/graph/multicut/kernighan-lin.hxx>
 #include <andres/graph/multicut-lifted/greedy-additive.hxx>
 #include <andres/graph/multicut-lifted/kernighan-lin.hxx>
+#include <nl-lmp/greedy-additive.hxx>
 #include <nl-lmp/solve-joint.hxx>
 
 #include <utils.hxx>
@@ -216,16 +217,59 @@ std::vector<int> GraphSolver::lmp_KLj(int distance_lower_bound, int distance_hig
     PRINT("egde_labels =")
     PRINT_STD_VEC(std::vector<int>(edge_labels.begin(), edge_labels.end()));
 
-    // read solution
+    // build classes per vertex
     std::vector<int> vertex_labels(lifted_graph.numberOfVertices());
     edgeToVertexLabels(lifted_graph, edge_labels, vertex_labels);
     PRINT("vertex_labels =")
     PRINT_STD_VEC(vertex_labels);
 
-    // TODO: use for initialization
-    // Solution greedyAdditiveEdgeContraction(Problem<GRAPH> const& problem, Solution const& input_labeling)
-    // TODO: use for final solution
-    // Solution update_labels_and_multicut(Problem<GRAPH> const& problem, Solution const& input)
+    // get number of classes
+    int num_classes = -1;
+    for (auto& it : vertex_labels) {
+        num_classes = std::max(num_classes, it);
+    }
+    PFORMAT_STR("num_classes = %d", num_classes)
+
+    nl_lmp::Problem< andres::graph::Graph<> > problem(vert_num, num_classes);
+    nl_lmp::Solution input_labeling(vert_num);
+
+    // build the problem from original
+    for (int i = 0; i < edge_cut_probabilities.size(); i++) {
+        int v0 = original_graph.vertexOfEdge(i, 0); 
+        int v1 = original_graph.vertexOfEdge(i, 1); 
+
+        int c0 = vertex_labels[v0]; 
+        int c1 = vertex_labels[v1]; 
+
+        // problem.setPairwiseCutCost(size_t v0, size_t v1, size_t c0, size_t c1, double value, bool add_edge_into_original_graph = true)
+        problem.setPairwiseCutCost(v0, v1, c0, c1, edge_cut_probabilities[i], true);
+    }
+
+    // extend the problem from with lifted
+    for (int i = 0; i < edge_split_probabilities_lifted.size(); i++) {
+        int v0 = lifted_graph.vertexOfEdge(i, 0); 
+        int v1 = lifted_graph.vertexOfEdge(i, 1); 
+
+        int c0 = vertex_labels[v0]; 
+        int c1 = vertex_labels[v1]; 
+
+        // problem.setPairwiseCutCost(size_t v0, size_t v1, size_t c0, size_t c1, double value, bool add_edge_into_original_graph = true)
+        problem.setPairwiseCutCost(v0, v1, c0, c1, edge_split_probabilities_lifted[i], false);
+    }
+
+    // store initial class labeling
+    for (int i = 0; i < vert_num; i++) {
+        input_labeling[i].classIndex = vertex_labels[i];
+    }
+
+    // Initialize clusters
+    nl_lmp::Solution input_solution = nl_lmp::greedyAdditiveEdgeContraction(problem, input_labeling);
+    // Run KLj algorithm
+    nl_lmp::Solution output_solution = nl_lmp::update_labels_and_multicut(problem, input_solution);
+
+    for (auto& it : output_solution) {
+        PFORMAT_STR("classIndex = %d clusterIndex = %d", it.classIndex % it.clusterIndex);
+    }
 
     return vertex_labels;
 }
