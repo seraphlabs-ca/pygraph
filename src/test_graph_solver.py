@@ -3,7 +3,7 @@ sys.path.append("./cpp/build/pygraph")
 import pygraphSWIG
 import numpy as np
 
-gs1 = pygraphSWIG.GraphSolver(6)
+gs1 = pygraphSWIG.GraphSolver()
 gs1.add_edge(0, 1, 5.0)
 gs1.add_edge(0, 3, -20.0)
 gs1.add_edge(1, 2, 5.0)
@@ -21,7 +21,7 @@ if edge_label != (0, 1, 0, 1, 1, 0, 0):
 else:
     print "TEST PASSED"
 
-is_prob = False
+is_prob = True
 
 if is_prob:
     def f(x):
@@ -33,17 +33,17 @@ else:
         x = min(x, 1.0 - 1.0 / 255)
         return -np.log(x / (1.0 - x))
 
-gs2 = pygraphSWIG.GraphSolver(6, is_prob)
+gs2 = pygraphSWIG.GraphSolver()
 # Need to use 1-prob to cut on low probability
 gs2.add_edge(0, 1, f(1.0))
-gs2.add_edge(0, 3, f(0.5))
+gs2.add_edge(0, 3, f(0.1))
 gs2.add_edge(1, 2, f(0.9))
 gs2.add_edge(1, 4, f(0.3))
 gs2.add_edge(2, 5, f(0.1))
-gs2.add_edge(3, 4, f(1.0))
+gs2.add_edge(3, 4, f(0.0))
 gs2.add_edge(4, 5, f(0.8))
 
-vertex_labels = gs2.KLj()
+vertex_labels = gs2.lmp_KL()
 vertext_clusters = {}
 for v, c in enumerate(vertex_labels):
     l = vertext_clusters.get(c, [])

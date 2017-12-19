@@ -35,7 +35,7 @@ void GraphSolver::add_edge(int i, int j, double w) {
     edges.push_back(std::tuple<int, int>(i, j));
     weights.push_back(w);
     // store number of vertices
-    vert_num = std::max(vert_num, std::max(i, j));
+    vert_num = std::max(vert_num, std::max(i, j)+1);
 }
 
 
@@ -53,17 +53,85 @@ std::shared_ptr< andres::graph::Graph<> > GraphSolver::get_graph() {
 }
     
 
-
 std::vector<int> GraphSolver::kernighan_lin() {
     std::shared_ptr < andres::graph::Graph<> > graph = this->get_graph();
-
     std::vector<char> edge_labels(graph->numberOfEdges());
     andres::graph::multicut::kernighanLin(*graph, this->weights, edge_labels, edge_labels);
 
     return std::vector<int>(edge_labels.begin(), edge_labels.end());
 }
 
-std::vector<int> GraphSolver::KLj(int distance_lower_bound, int distance_higher_bound) {
+std::vector<int> GraphSolver::lmp_KL(int distance_lower_bound, int distance_higher_bound) {
+    std::shared_ptr < andres::graph::Graph<> > graph = this->get_graph();
+
+    if (distance_lower_bound < 0) {
+        distance_lower_bound = 0;
+    }
+    if (distance_higher_bound < 0) {
+        distance_higher_bound = graph->numberOfVertices()-1;
+    }
+
+    // lift graph
+    Graph<> lifted_graph;
+    lift(*graph, lifted_graph, distance_higher_bound, distance_lower_bound);
+
+    vector<double> edge_cut_probabilities = this->weights;
+    vector<double> edge_split_probabilities_lifted(lifted_graph.numberOfEdges());
+    if (weights_probabilities) {
+        transform(
+            edge_cut_probabilities.begin(),
+            edge_cut_probabilities.end(),
+            edge_cut_probabilities.begin(),
+            ProbabilityToNegativeLogInverseProbability<double,double>()
+        );
+    }    
+
+    liftEdgeValues(
+        *graph,
+        lifted_graph,
+        edge_cut_probabilities.begin(),
+        edge_split_probabilities_lifted.begin()
+    );
+    
+    if (weights_probabilities) {
+        transform(
+            edge_split_probabilities_lifted.begin(),
+            edge_split_probabilities_lifted.end(),
+            edge_split_probabilities_lifted.begin(),
+            NegativeLogProbabilityToInverseProbability<double,double>()
+        );
+    }
+
+    // Solve Lifted Multicut problem
+    std::vector<char> edge_labels(lifted_graph.numberOfEdges());
+    auto& edge_values = edge_split_probabilities_lifted;
+    auto& original_graph = *graph;
+
+    // convert probabilities to weights
+    if (weights_probabilities) {
+        std::transform(
+            edge_values.begin(),
+            edge_values.end(),
+            edge_values.begin(),
+            andres::NegativeLogProbabilityRatio<double,double>()
+            );
+    }
+
+
+    // GAEC initialization
+    andres::graph::multicut_lifted::greedyAdditiveEdgeContraction(original_graph, lifted_graph, edge_values, edge_labels);
+    // kernighan-Lin optimization
+    andres::graph::multicut_lifted::kernighanLin(original_graph, lifted_graph, edge_values, edge_labels, edge_labels);
+
+    // read solution
+    std::vector<int> vertex_labels(lifted_graph.numberOfVertices());
+    edgeToVertexLabels(lifted_graph, edge_labels, vertex_labels);
+
+    return vertex_labels;
+}
+
+
+std::vector<int> GraphSolver::lmp_KLj(int distance_lower_bound, int distance_higher_bound) {
     std::shared_ptr < andres::graph::Graph<> > graph = this->get_graph();
 
     if (distance_lower_bound < 0) {
@@ -124,6 +192,7 @@ std::vector<int> GraphSolver::KLj(int distance_lower_bound, int distance_higher_
 
     PRINT("egde_values =")
     PRINT_STD_VEC(edge_values);
+    // convert probabilities to weights
     if (weights_probabilities) {
         std::transform(
             edge_values.begin(),
@@ -144,6 +213,8 @@ std::vector<int> GraphSolver::KLj(int distance_lower_bound, int distance_higher_
     PRINT_STD_VEC(std::vector<int>(edge_labels.begin(), edge_labels.end()));
     // kernighan-Lin optimization
     andres::graph::multicut_lifted::kernighanLin(original_graph, lifted_graph, edge_values, edge_labels, edge_labels);
+    PRINT("egde_labels =")
+    PRINT_STD_VEC(std::vector<int>(edge_labels.begin(), edge_labels.end()));
 
     // read solution
     std::vector<int> vertex_labels(lifted_graph.numberOfVertices());

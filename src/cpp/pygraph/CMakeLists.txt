@@ -5,6 +5,11 @@ INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/../../../../graph/include)
 INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/../../../../graph/src/command-line-tools)
 INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/../../../../marray/include)
 
+
+# ADD_DEFINITIONS(-fno-deduce-init-list)
+ADD_DEFINITIONS(-DHAVE_CPP11_INITIALIZER_LISTS)
+ADD_DEFINITIONS(-DHAVE_CPP11_VARIADIC_TEMPLATES)
+
 ##############################################################################
 # HDF5
 ##############################################################################
