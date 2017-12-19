@@ -12,8 +12,8 @@
 #include <nl-lmp/greedy-additive.hxx>
 #include <nl-lmp/solve-joint.hxx>
 
-#include <utils.hxx>
-#include <probabilistic-lifting.hxx>
+#include <command-line-tools/utils.hxx>
+#include <command-line-tools/probabilistic-lifting.hxx>
 
 
 using namespace std;

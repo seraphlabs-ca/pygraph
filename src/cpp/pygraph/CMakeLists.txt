@@ -1,12 +1,11 @@
-INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/..)
 INCLUDE_DIRECTORIES(${CMAKE_CURRENT_BINARY_DIR})
+INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/..)
 INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR})
-INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/../../../../graph/include)
-INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/../../../../graph/src/command-line-tools)
-INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/../../../../marray/include)
 
 
-# ADD_DEFINITIONS(-fno-deduce-init-list)
+##############################################################################
+# MArray
+##############################################################################
 ADD_DEFINITIONS(-DHAVE_CPP11_INITIALIZER_LISTS)
 ADD_DEFINITIONS(-DHAVE_CPP11_VARIADIC_TEMPLATES)
 
