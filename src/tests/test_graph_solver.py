@@ -1,9 +1,7 @@
-import sys
-sys.path.append("./cpp/build/pygraph")
-import pygraphSWIG
+import pygraph
 import numpy as np
 
-gs1 = pygraphSWIG.GraphSolver()
+gs1 = pygraph.GraphSolver()
 gs1.add_edge(0, 1, 5.0)
 gs1.add_edge(0, 3, -20.0)
 gs1.add_edge(1, 2, 5.0)
@@ -33,7 +31,7 @@ else:
         x = min(x, 1.0 - 1.0 / 255)
         return -np.log(x / (1.0 - x))
 
-gs2 = pygraphSWIG.GraphSolver()
+gs2 = pygraph.GraphSolver()
 # Need to use 1-prob to cut on low probability
 gs2.add_edge(0, 1, f(1.0))
 gs2.add_edge(0, 3, f(0.1))
@@ -50,7 +48,7 @@ print "vertex_class_cluster = %s" % str(vertex_class_cluster)
 
 
 # test speed
-gs3 = pygraphSWIG.GraphSolver()
+gs3 = pygraph.GraphSolver()
 
 # 10 frames
 N = 10
