@@ -136,64 +136,13 @@ std::vector<int> GraphSolver::lmp_KL(int distance_lower_bound, int distance_high
 }
 
 
-std::vector< std::pair< int, int >  > GraphSolver::lmp_KLj(int distance_lower_bound, int distance_higher_bound) {
+std::vector< std::pair< int, int >  > GraphSolver::mp_KLj() {
     std::shared_ptr < andres::graph::Graph<> > graph = this->get_graph();
 
-    if (distance_lower_bound < 0) {
-        distance_lower_bound = 0;
-    }
-    if (distance_higher_bound < 0) {
-        distance_higher_bound = graph->numberOfVertices()-1;
-    }
-
-    // lift graph
-    Graph<> lifted_graph;
-    lift(*graph, lifted_graph, distance_higher_bound, distance_lower_bound);
-
-    vector<double> edge_cut_probabilities = this->weights;
-    vector<double> edge_split_probabilities_lifted(lifted_graph.numberOfEdges());
-    // PFORMAT_STR("graph.numberOfVertices() = %d", graph->numberOfVertices())
-    // PFORMAT_STR("graph.numberOfEdges() = %d", graph->numberOfEdges())
-    // PFORMAT_STR("lifted_graph.numberOfVertices() = %d", lifted_graph.numberOfVertices())
-    // PFORMAT_STR("lifted_graph.numberOfEdges() = %d", lifted_graph.numberOfEdges())
-    // PRINT("edge_cut_probabilities =")
-    // PRINT_STD_VEC(edge_cut_probabilities)
-    if (weights_probabilities) {
-        transform(
-            edge_cut_probabilities.begin(),
-            edge_cut_probabilities.end(),
-            edge_cut_probabilities.begin(),
-            ProbabilityToNegativeLogInverseProbability<double,double>()
-        );
-        // PRINT("edge_cut_probabilities =")
-        // PRINT_STD_VEC(edge_cut_probabilities)
-    }    
-
-    // HERE;
-    liftEdgeValues(
-        *graph,
-        lifted_graph,
-        edge_cut_probabilities.begin(),
-        edge_split_probabilities_lifted.begin()
-    );
-    
-    // PRINT("edge_split_probabilities_lifted =")
-    // PRINT_STD_VEC(edge_split_probabilities_lifted)
-    if (weights_probabilities) {
-        transform(
-            edge_split_probabilities_lifted.begin(),
-            edge_split_probabilities_lifted.end(),
-            edge_split_probabilities_lifted.begin(),
-            NegativeLogProbabilityToInverseProbability<double,double>()
-        );
-        // PRINT("edge_split_probabilities_lifted =")
-        // PRINT_STD_VEC(edge_split_probabilities_lifted)
-    }
-
-    // Solve Lifted Multicut problem
-    std::vector<char> edge_labels(lifted_graph.numberOfEdges());
-    auto& edge_values = edge_split_probabilities_lifted;
+    // Solve  Multicut problem
     auto& original_graph = *graph;
+    auto& lifted_graph = *graph;
+    auto edge_values = this->weights;
 
     // PRINT("egde_values =")
     // PRINT_STD_VEC(edge_values);
@@ -209,56 +158,26 @@ std::vector< std::pair< int, int >  > GraphSolver::lmp_KLj(int distance_lower_bo
         // PRINT_STD_VEC(edge_values);
     }
 
-
-    // GAEC initialization
-    andres::graph::multicut_lifted::greedyAdditiveEdgeContraction(original_graph, lifted_graph, edge_values, edge_labels);
-    // PRINT("egde_values =")
-    // PRINT_STD_VEC(edge_values);
-    // PRINT("egde_labels =")
-    // PRINT_STD_VEC(std::vector<int>(edge_labels.begin(), edge_labels.end()));
-
-    // build classes per vertex
-    std::vector<int> vertex_labels(lifted_graph.numberOfVertices());
-    edgeToVertexLabels(lifted_graph, edge_labels, vertex_labels);
-    // PRINT("vertex_labels =")
-    // PRINT_STD_VEC(vertex_labels);
-
     // get number of classes
-    int num_classes = -1;
-    for (auto& it : vertex_labels) {
-        num_classes = std::max(num_classes, it+1);
-    }
-    // PFORMAT_STR("num_classes = %d", num_classes)
+    int num_classes = 2;
 
-    nl_lmp::Problem< andres::graph::Graph<> > problem(vert_num, num_classes);
-    nl_lmp::Solution input_labeling(vert_num);
+    nl_lmp::Problem< andres::graph::Graph<> > problem(graph->numberOfVertices(), num_classes);
+    nl_lmp::Solution input_labeling(graph->numberOfVertices());
 
-    // build the problem from original
-    for (int i = 0; i < edge_cut_probabilities.size(); i++) {
+    // build the problem from original graph with all nodes disconnected
+    for (int i = 0; i < edge_values.size(); i++) {
         int v0 = original_graph.vertexOfEdge(i, 0); 
         int v1 = original_graph.vertexOfEdge(i, 1); 
-        int c0 = vertex_labels[v0]; 
-        int c1 = vertex_labels[v1]; 
+        int c0 = 1; 
+        int c1 = 1; 
 
         // problem.setPairwiseCutCost(size_t v0, size_t v1, size_t c0, size_t c1, double value, bool add_edge_into_original_graph = true)
-        problem.setPairwiseCutCost(v0, v1, c0, c1, edge_cut_probabilities[i], true);
-    }
-
-    // extend the problem from with lifted
-    for (int i = 0; i < edge_split_probabilities_lifted.size(); i++) {
-        int v0 = lifted_graph.vertexOfEdge(i, 0); 
-        int v1 = lifted_graph.vertexOfEdge(i, 1); 
-
-        int c0 = vertex_labels[v0]; 
-        int c1 = vertex_labels[v1]; 
-
-        // problem.setPairwiseCutCost(size_t v0, size_t v1, size_t c0, size_t c1, double value, bool add_edge_into_original_graph = true)
-        problem.setPairwiseCutCost(v0, v1, c0, c1, edge_split_probabilities_lifted[i], false);
+        problem.setPairwiseCutCost(v0, v1, c0, c1, edge_values[i], true);
     }
 
     // store initial class labeling
-    for (int i = 0; i < vert_num; i++) {
-        input_labeling[i].classIndex = vertex_labels[i];
+    for (int i = 0; i < graph->numberOfVertices(); i++) {
+        input_labeling[i].classIndex = 1;
     }
 
     // Initialize clusters
@@ -267,8 +186,8 @@ std::vector< std::pair< int, int >  > GraphSolver::lmp_KLj(int distance_lower_bo
     nl_lmp::Solution output_solution = nl_lmp::update_labels_and_multicut(problem, input_solution);
 
     // store vertices class and clusters
-    std::vector< std::pair< int, int >  > vertex_class_cluster(vert_num);
-    for (int i = 0; i < vert_num; i++) {
+    std::vector< std::pair< int, int >  > vertex_class_cluster(graph->numberOfVertices());
+    for (int i = 0; i < graph->numberOfVertices(); i++) {
         vertex_class_cluster[i].first = output_solution[i].classIndex;
         vertex_class_cluster[i].second = output_solution[i].clusterIndex;
         // PFORMAT_STR("classIndex = %d clusterIndex = %d", output_solution[i].classIndex % output_solution[i].clusterIndex);

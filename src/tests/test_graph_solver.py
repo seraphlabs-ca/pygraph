@@ -21,34 +21,45 @@ if edge_label != (0, 1, 0, 1, 1, 0, 0):
 else:
     print "TEST PASSED"
 
-is_prob = True
 
-if is_prob:
-    def f(x):
-        return 1.0 - x
+def get_gs(is_prob=True):
+    if is_prob:
+        def f(x):
+            return 1.0 - x
 
+    else:
+        def f(x):
+            x = max(x, 1.0 / 255)
+            x = min(x, 1.0 - 1.0 / 255)
+            return np.log(x / (1.0 - x))
+
+    # Test lifting multicut problem + KL
+    gs = pygraph.GraphSolver(is_prob)
+    # Probability to cut edge
+    gs.add_edge(0, 1, f(1.0))
+    gs.add_edge(0, 3, f(0.1))
+    gs.add_edge(1, 2, f(0.9))
+    gs.add_edge(1, 4, f(0.3))
+    gs.add_edge(2, 5, f(0.1))
+    gs.add_edge(3, 4, f(0.0))
+    gs.add_edge(4, 5, f(0.8))
+    gs.add_edge(4, 6, f(0.8))
+    gs.add_edge(5, 6, f(0.8))
+
+    return gs
+
+gs21 = get_gs(True)
+vertex_cluster = gs21.lmp_KL()
+print "lmp_KL vertex_cluster = %s" % str(vertex_cluster)
+
+gs22 = get_gs(False)
+vertex_class_cluster = gs22.mp_KLj()
+print "mp_KLj vertex_class_cluster = %s" % str(vertex_class_cluster)
+
+if list(vertex_cluster) != [v[1] for v in vertex_class_cluster]:
+    print "is_prob FAILED"
 else:
-    def f(x):
-        x = max(x, 1.0 / 255)
-        x = min(x, 1.0 - 1.0 / 255)
-        return -np.log(x / (1.0 - x))
-
-# Test lifting multicut problem + KLj
-gs2 = pygraph.GraphSolver()
-# Need to use 1-prob to cut on low probability
-gs2.add_edge(0, 1, f(1.0))
-gs2.add_edge(0, 3, f(0.1))
-gs2.add_edge(1, 2, f(0.9))
-gs2.add_edge(1, 4, f(0.3))
-gs2.add_edge(2, 5, f(0.1))
-gs2.add_edge(3, 4, f(0.0))
-gs2.add_edge(4, 5, f(0.8))
-gs2.add_edge(4, 6, f(0.8))
-gs2.add_edge(5, 6, f(0.8))
-
-vertex_class_cluster = gs2.lmp_KLj()
-print "vertex_class_cluster = %s" % str(vertex_class_cluster)
-
+    print "is_prob PASSED"
 
 # test speed
 
@@ -66,12 +77,13 @@ for r in range(R):
     for i in range(N):
         for s in range(S):
             # connect to all future frames and all subjects
-            for j in range(i + 1, N):
+            for j in range(i, N):
                 for t in range(S):
-                    gs3.add_edge(i * N + s, j * N + t, np.random.rand())
-    gs3.lmp_KLj()
+                    if (i != j) or (s > t):
+                        gs3.add_edge(i * N + s, j * N + t, np.random.rand())
+    gs3.mp_KLj()
 
 t1 = time.time()
 
 dt = (t1 - t0) / R
-print "lmp_KLj %.2e [sec] = %.2e [fps]" % (dt, 1.0 / dt)
+print "mp_KLj %.2e [sec] = %.2e [fps]" % (dt, 1.0 / dt)
