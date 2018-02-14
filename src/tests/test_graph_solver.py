@@ -66,7 +66,7 @@ else:
 # 10 frames
 N = 10
 # 5 subjects
-S = 5
+S = 20
 # R repeats
 R = 10
 
@@ -78,9 +78,9 @@ for r in range(R):
         for s in range(S):
             # connect to all future frames and all subjects
             for j in range(i, N):
-                for t in range(S):
-                    if (i != j) or (s > t):
-                        gs3.add_edge(i * N + s, j * N + t, np.random.rand())
+                for t in range(s + 1, S):
+                    if (i != j) or (s != t):
+                        gs3.add_edge(i * S + s, j * S + t, np.random.rand())
     gs3.mp_KLj()
 
 t1 = time.time()
