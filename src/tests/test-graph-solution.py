@@ -93,7 +93,7 @@ def plot_trajectories(T, C):
     plt.tight_layout()
 
 
-def get_clusters(T, k_weight=1000.0, d_weight=10.0, is_prob=True):
+def get_clusters(T, k_weight=1000.0, d_weight=1.0, is_prob=True):
     """
     Builds a graph from T, and cluster based on graph multicut
     """
@@ -138,19 +138,19 @@ def get_clusters(T, k_weight=1000.0, d_weight=10.0, is_prob=True):
                         # use k and distance as weight
                         c = k_weight * np.power(float(k1 - k2) / K, 2) + d_weight * np.sum(np.power(xy1 - xy2, 2))
                         # print "v1 = %i v2 = %i c = %.2e" % (v1, v2, c)
-                        gs.add_edge(v1, v2, 1.0 - np.exp(-c))
+                        gs.add_edge(v1, v2, 1.0 - exp(-c))
 
     print "edges = %i vertices = %i" % (len(added_e), len(kn_v_map))
 
     # cluster T
 
-    vertex_cluster = gs.lmp_KL()
-    print "vertex_cluster = %s" % str(vertex_cluster)
-
-    # vertex_class_cluster = gs.mp_KLj()
-    # vertex_class, vertex_cluster = zip(*vertex_class_cluster)
-    # print "vertex_class = %s" % str(vertex_class)
+    # vertex_cluster = gs.lmp_KL()
     # print "vertex_cluster = %s" % str(vertex_cluster)
+
+    vertex_class_cluster = gs.mp_KLj()
+    vertex_class, vertex_cluster = zip(*vertex_class_cluster)
+    print "vertex_class = %s" % str(vertex_class)
+    print "vertex_cluster = %s" % str(vertex_cluster)
 
     C = np.zeros((K, N), dtype=np.int)
     for v, c in enumerate(vertex_cluster):
@@ -172,6 +172,6 @@ if __name__ == "__main__":
     C = get_clusters(T=T)
 
     print "C = %s" % str(C)
-    print "C is correct = %s" % str(np.all(C == C[:, 0:1], axis=1))
+    print "C trajectory is correct = %s" % str(np.all(C == C[:, 0:1], axis=1))
 
     plot_trajectories(T, C)
