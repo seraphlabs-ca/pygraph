@@ -1,3 +1,7 @@
+"""
+Tests pygraph solver functionality.
+"""
+
 import pygraph
 import numpy as np
 import time
