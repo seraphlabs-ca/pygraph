@@ -93,7 +93,7 @@ def plot_trajectories(T, C):
     plt.tight_layout()
 
 
-def get_clusters(T, k_weight=1000.0, d_weight=0.0, is_prob=True):
+def get_clusters(T, k_weight=1000.0, d_weight=10.0, is_prob=True):
     """
     Builds a graph from T, and cluster based on graph multicut
     """
@@ -164,7 +164,7 @@ def get_clusters(T, k_weight=1000.0, d_weight=0.0, is_prob=True):
 # Main
 #=============================================================================#
 if __name__ == "__main__":
-    N = 100
+    N = 20
     K = 5
 
     T = build_trajectories(N=N, K=K)
@@ -172,5 +172,6 @@ if __name__ == "__main__":
     C = get_clusters(T=T)
 
     print "C = %s" % str(C)
+    print "C is correct = %s" % str(np.all(C == C[:, 0:1], axis=1))
 
     plot_trajectories(T, C)
