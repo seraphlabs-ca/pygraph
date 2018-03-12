@@ -48,7 +48,9 @@ def plot_trajectories(T, C, tag=""):
     K = T.shape[0]
     colors = plt.get_cmap("jet")(np.linspace(0.0, 1.0, K))
 
-    fig = plt.figure()
+    fig = plt.figure(figsize=(12, 6))
+
+    plt.subplot(1, 2, 1)
     # plot 2D trajectories
     for k, XY in enumerate(T):
         c = colors[k]
@@ -59,7 +61,7 @@ def plot_trajectories(T, C, tag=""):
     plt.ylabel("Y")
     plt.grid()
     plt.legend(loc="best")
-    plt.tight_layout()
+    # plt.tight_layout()
 
     # # plot time series
     # fig = plt.figure()
@@ -75,8 +77,9 @@ def plot_trajectories(T, C, tag=""):
     # plt.tight_layout()
 
     # plot trajectories based on clusters
-    fig = plt.figure()
+    # fig = plt.figure()
 
+    plt.subplot(1, 2, 2)
     K = np.max(C) + 1
     colors = plt.get_cmap("jet")(np.linspace(0.0, 1.0, K))
     # plot 2D trajectories
@@ -90,6 +93,7 @@ def plot_trajectories(T, C, tag=""):
     plt.ylabel("Y")
     plt.grid()
     plt.legend(loc="best")
+
     plt.tight_layout()
 
 
@@ -118,8 +122,6 @@ def get_clusters(T, k_weight=1e2, d_weight=1e1, is_prob=True):
 
     K, N = T.shape[0:2]
 
-    W = np.zeros((K, N), dtype=np.int)
-
     # connect all observations with all observations
     for k1 in range(K):
         for n1 in range(N):
@@ -136,7 +138,8 @@ def get_clusters(T, k_weight=1e2, d_weight=1e1, is_prob=True):
                         xy1 = T[k1, n1]
                         xy2 = T[k2, n2]
                         # use k and distance as weight
-                        c = k_weight * np.power(float(k1 - k2) / K, 2) + d_weight * np.sum(np.power(xy1 - xy2, 2))
+                        c = k_weight * np.power(float(k1 - k2) / K, 2) + d_weight * \
+                            np.sum(np.power((xy1 - xy2), 2))
                         # print "v1 = %i v2 = %i c = %.2e" % (v1, v2, c)
                         gs.add_edge(v1, v2, 1.0 - exp(-c))
 
@@ -165,22 +168,26 @@ def get_clusters(T, k_weight=1e2, d_weight=1e1, is_prob=True):
 #=============================================================================#
 if __name__ == "__main__":
     N = 100
-    K = 5
+    K = 4
 
-    T = build_trajectories(N=N, K=K)
+    T_gt = build_trajectories(N=N, K=K)
+    T_d_noise = T_gt + 1e-2 * np.random.randn(*T_gt.shape)
+    T_k_noise = np.concatenate([np.random.permutation(T_gt[:, :(N / 2), :]),
+                                np.random.permutation(T_gt[:, (N / 2):, :])])
 
-    for tag, k_weight, d_weight in [
-        ("appearance", 1e2, 0.0),
-        ("distance", 0.0, 1e2),
-        ("joint", 1e2, 1e1),
-    ]:
-        print "\n\n=======> tag = %s\n" % tag
-        C = get_clusters(T=T,
-                         k_weight=k_weight,
-                         d_weight=d_weight,
-                         )
+    for T_tag, T in [("GT", T_gt), ("XY", T_d_noise), ("K", T_k_noise)]:
+        for tag, k_weight, d_weight in [
+            ("appearance", 1e2, 0.0),
+            ("distance", 0.0, 1e1),
+            ("joint", 1e2, 1e2),
+        ]:
+            print "\n\n=======> tag = %s\n" % tag
+            C = get_clusters(T=T,
+                             k_weight=k_weight,
+                             d_weight=d_weight,
+                             )
 
-        print "C = %s" % str(C)
-        print "C trajectory is correct = %s" % str(np.all(C == C[:, 0:1], axis=1))
+            print "C = %s" % str(C)
+            print "C trajectory is correct = %s" % str(np.all(C == C[:, 0:1], axis=1))
 
-        plot_trajectories(T, C, tag=" - %s" % tag)
+            plot_trajectories(T, C, tag=" - T=%s prob=%s" % (T_tag, tag))
