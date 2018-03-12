@@ -41,7 +41,7 @@ def build_trajectories(N, K, H=4):
     return T
 
 
-def plot_trajectories(T, C):
+def plot_trajectories(T, C, tag=""):
     """
     Plots the trajectories.
     """
@@ -54,25 +54,25 @@ def plot_trajectories(T, C):
         c = colors[k]
         plt.plot(XY[:, 0], XY[:, 1], marker="x", lw=1, label="%i" % (k + 1))
 
-    plt.title("T")
+    plt.title("T%s" % tag)
     plt.xlabel("X")
     plt.ylabel("Y")
     plt.grid()
     plt.legend(loc="best")
     plt.tight_layout()
 
-    # plot time series
-    fig = plt.figure()
-    for k, XY in enumerate(T):
-        plt.plot(XY[:, 0], marker="x", c=colors[k], lw=1, label="%i" % (k + 1))
-        plt.plot(XY[:, 1], marker="o", c=colors[k], lw=1)
+    # # plot time series
+    # fig = plt.figure()
+    # for k, XY in enumerate(T):
+    #     plt.plot(XY[:, 0], marker="x", c=colors[k], lw=1, label="%i" % (k + 1))
+    #     plt.plot(XY[:, 1], marker="o", c=colors[k], lw=1)
 
-    plt.title("Time Series T")
-    plt.xlabel("step")
-    plt.ylabel("value")
-    plt.grid()
-    plt.legend(loc="best")
-    plt.tight_layout()
+    # plt.title("Time Series T%s" % tag)
+    # plt.xlabel("step")
+    # plt.ylabel("value")
+    # plt.grid()
+    # plt.legend(loc="best")
+    # plt.tight_layout()
 
     # plot trajectories based on clusters
     fig = plt.figure()
@@ -85,7 +85,7 @@ def plot_trajectories(T, C):
         c = colors[k]
         plt.scatter(XY[:, 0], XY[:, 1], marker="x", lw=1, label="%i" % (k + 1))
 
-    plt.title("C")
+    plt.title("C%s" % tag)
     plt.xlabel("X")
     plt.ylabel("Y")
     plt.grid()
@@ -93,7 +93,7 @@ def plot_trajectories(T, C):
     plt.tight_layout()
 
 
-def get_clusters(T, k_weight=1000.0, d_weight=1.0, is_prob=True):
+def get_clusters(T, k_weight=1e2, d_weight=1e1, is_prob=True):
     """
     Builds a graph from T, and cluster based on graph multicut
     """
@@ -125,7 +125,7 @@ def get_clusters(T, k_weight=1000.0, d_weight=1.0, is_prob=True):
         for n1 in range(N):
             v1 = get_vertex(k1, n1)
             for k2 in range(k1, K):
-                for n2 in range(n1, N):
+                for n2 in range(n1, min(N, n1 + 2)):
                     v2 = get_vertex(k2, n2)
 
                     # add each edge only once
@@ -164,14 +164,23 @@ def get_clusters(T, k_weight=1000.0, d_weight=1.0, is_prob=True):
 # Main
 #=============================================================================#
 if __name__ == "__main__":
-    N = 20
+    N = 100
     K = 5
 
     T = build_trajectories(N=N, K=K)
 
-    C = get_clusters(T=T)
+    for tag, k_weight, d_weight in [
+        ("appearance", 1e2, 0.0),
+        ("distance", 0.0, 1e2),
+        ("joint", 1e2, 1e1),
+    ]:
+        print "\n\n=======> tag = %s\n" % tag
+        C = get_clusters(T=T,
+                         k_weight=k_weight,
+                         d_weight=d_weight,
+                         )
 
-    print "C = %s" % str(C)
-    print "C trajectory is correct = %s" % str(np.all(C == C[:, 0:1], axis=1))
+        print "C = %s" % str(C)
+        print "C trajectory is correct = %s" % str(np.all(C == C[:, 0:1], axis=1))
 
-    plot_trajectories(T, C)
+        plot_trajectories(T, C, tag=" - %s" % tag)
