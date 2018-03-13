@@ -131,7 +131,7 @@ def get_clusters(T, k_weight=1e2, d_weight=1e1, is_prob=True):
                     v2 = get_vertex(k2, n2)
 
                     # add each edge only once
-                    e = (v1, v2) if v1 >= 2 else (v2, v1)
+                    e = (v1, v2)
                     # we add edge only once
                     if (e not in added_e) and (v1 != v2):
                         added_e.add(e)
